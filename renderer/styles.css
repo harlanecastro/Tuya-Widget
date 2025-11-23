@@ -9,7 +9,7 @@
   --success: #06d6a0;
   --warning: #ffd166;
   --danger: #ef476f;
-  --surface: rgba(43, 45, 66, 0.9);
+  --surface: rgb(43, 45, 66);
   --surface-light: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.2);
 }
@@ -23,7 +23,7 @@
 }
 
 body {
-  background: transparent;
+  background: #2b2d42;
   color: var(--light);
   font-size: 14px;
   line-height: 1.4;
@@ -35,7 +35,6 @@ body {
   width: 100%;
   height: 100vh;
   background: var(--surface);
-  backdrop-filter: blur(20px);
   border-radius: 12px;
   border: 1px solid var(--border);
   display: flex;
@@ -383,10 +382,13 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .quick-btn {
   flex: 1;
+  min-width: 60px;
   padding: 8px;
   background: var(--primary);
   color: white;
@@ -398,6 +400,43 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-btn[style*="display: none"] {
+  display: none !important;
+}
+
+/* Botões com press and hold */
+.hold-btn {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hold-btn:active {
+  transform: scale(0.95);
+}
+
+.hold-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  width: 0%;
+  transition: width 0.1s linear;
+  border-radius: 0 0 6px 6px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hold-btn.holding .hold-progress {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.hold-btn.holding {
+  opacity: 0.9;
 }
 
 .quick-btn:hover {
@@ -426,6 +465,16 @@ body {
 
 .quick-actions button:nth-child(2):hover {
   background: #c82333 !important;
+}
+
+.quick-actions .reboot-btn {
+  background: var(--warning) !important;
+  color: var(--dark) !important;
+  font-weight: 600;
+}
+
+.quick-actions .reboot-btn:hover {
+  background: #ffc107 !important;
 }
 
 /* Загрузка */

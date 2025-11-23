@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isDev: process.env.NODE_ENV === 'development'
 })
 
-// Обработчики событий для устройств
+// Manipuladores de eventos para dispositivos
 ipcRenderer.on('device-selected', (event, device) => {
   window.dispatchEvent(new CustomEvent('device-selected', { detail: device }))
 })

@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electro
 const path = require('path')
 const Store = require('electron-store')
 
-// Инициализация хранилища
+// Inicialização do armazenamento
 const store = new Store()
 
 let mainWindow = null
@@ -19,7 +19,8 @@ function createWindow() {
     x: width - 340,
     y: 100,
     frame: false,
-    transparent: true,
+    transparent: false,
+    backgroundColor: '#2b2d42',
     resizable: false,
     alwaysOnTop: true,
     show: false,
@@ -71,14 +72,14 @@ app.whenReady().then(() => {
   try {
     const savedDevices = store.get('tuya_devices')
     if (savedDevices && Array.isArray(savedDevices)) {
-      devices = savedDevices.filter(device => device.dev_type === 'light')
+      devices = savedDevices
       const savedCurrentDevice = store.get('tuya_current_device')
       if (savedCurrentDevice && devices.find(d => d.id === savedCurrentDevice.id)) {
         currentDevice = savedCurrentDevice
       }
     }
   } catch (error) {
-    // Игнорируем ошибки
+    // Ignora erros
   }
 
   globalShortcut.register('Alt+W', () => {
@@ -120,7 +121,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
-// IPC обработчики
+// Manipuladores IPC
 ipcMain.handle('get-stored-data', (event, key) => {
   return store.get(key)
 })

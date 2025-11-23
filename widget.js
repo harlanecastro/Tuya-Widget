@@ -1,643 +1,675 @@
-// Глобальные переменные
-let devices = []
-let currentDevice = null
-let isOnline = false
-let accessToken = ''
-let refreshToken = ''
-let baseUrl = 'https://px1.tuyaeu.com/homeassistant/'
-let proxyUrl = ''
-let refreshInterval = null
+// Variáveis globais
+let devices = [];
+let currentDevice = null;
+let isOnline = false;
+let accessToken = "";
+let refreshToken = "";
+let baseUrl = "https://px1.tuyaeu.com/homeassistant/";
+let proxyUrl = "";
+let refreshInterval = null;
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function () {
-  initializeWidget()
-})
+// Inicialização ao carregar a página
+document.addEventListener("DOMContentLoaded", function () {
+  initializeWidget();
+});
 
-// Очистка при закрытии
-window.addEventListener('beforeunload', function () {
-  stopAutoRefresh()
-})
+// Limpeza ao fechar
+window.addEventListener("beforeunload", function () {
+  stopAutoRefresh();
+});
 
 function initializeWidget() {
-  // Проверяем сохраненные данные авторизации
-  checkSavedAuth()
+  // Verifica dados de autenticação salvos
+  checkSavedAuth();
 
-  // Настраиваем обработчики событий
-  setupEventListeners()
+  // Configura manipuladores de eventos
+  setupEventListeners();
 
-  // Настраиваем обработчики событий от трея
-  setupTrayEventListeners()
+  // Configura manipuladores de eventos da bandeja do sistema
+  setupTrayEventListeners();
 
-  // Показываем секцию выбора устройства по умолчанию
-  showDeviceSection()
+  // Mostra a seção de seleção de dispositivo por padrão
+  showDeviceSection();
 }
 
 function setupEventListeners() {
-  // Обработчики слайдеров
-  document.getElementById('hueSlider').addEventListener('input', function () {
-    updateColorFromHue(this.value)
-  })
+  // Manipuladores dos controles deslizantes
+  document.getElementById("hueSlider").addEventListener("input", function () {
+    updateColorFromHue(this.value);
+  });
 
-  document.getElementById('brightnessSlider').addEventListener('input', function () {
-    updateBrightness(this.value)
-  })
+  document
+    .getElementById("brightnessSlider")
+    .addEventListener("input", function () {
+      updateBrightness(this.value);
+    });
 
-  // Обработчик выбора устройства
-  document.getElementById('deviceSelect').addEventListener('change', function () {
-    selectDevice(this.value)
-  })
+  // Manipulador de seleção de dispositivo
+  document
+    .getElementById("deviceSelect")
+    .addEventListener("change", function () {
+      selectDevice(this.value);
+    });
 
-  // Обработчик Enter для пароля
-  document.getElementById('password').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      doLogin()
+  // Manipulador Enter para senha
+  document.getElementById("password").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      doLogin();
     }
-  })
+  });
 }
 
 function setupTrayEventListeners() {
-  // Слушаем события от трея
-  window.addEventListener('device-selected', (event) => {
-    const device = event.detail
+  // Escuta eventos da bandeja do sistema
+  window.addEventListener("device-selected", (event) => {
+    const device = event.detail;
     if (device) {
-      // Находим устройство в локальном списке
-      const localDevice = devices.find(d => d.id === device.id)
+      // Encontra o dispositivo na lista local
+      const localDevice = devices.find((d) => d.id === device.id);
       if (localDevice) {
-        selectDevice(device.id)
-        showSuccess(`Устройство "${device.name || device.id}" выбрано`)
+        selectDevice(device.id);
+        showSuccess(`Dispositivo "${device.name || device.id}" selecionado`);
       }
     }
-  })
+  });
 
-  window.addEventListener('control-device', (event) => {
-    const action = event.detail
+  window.addEventListener("control-device", (event) => {
+    const action = event.detail;
     if (action && currentDevice) {
       switch (action) {
-        case 'turnOn':
-          turnDeviceOn()
-          break
-        case 'turnOff':
-          turnDeviceOff()
-          break
+        case "turnOn":
+          turnDeviceOn();
+          break;
+        case "turnOff":
+          turnDeviceOff();
+          break;
       }
     }
-  })
+  });
 }
 
 function checkSavedAuth() {
-  const savedAuth = localStorage.getItem('tuya_auth')
-  const savedDevices = localStorage.getItem('tuya_devices')
+  const savedAuth = localStorage.getItem("tuya_auth");
+  const savedDevices = localStorage.getItem("tuya_devices");
 
   if (savedAuth && savedDevices) {
     try {
-      const authData = JSON.parse(savedAuth)
-      const devicesData = JSON.parse(savedDevices)
+      const authData = JSON.parse(savedAuth);
+      const devicesData = JSON.parse(savedDevices);
 
-      // Восстанавливаем данные авторизации
-      accessToken = authData.access_token
-      refreshToken = authData.refresh_token
-      isOnline = true
-      baseUrl = authData.baseUrl
-      proxyUrl = authData.proxyUrl
+      // Restaura dados de autenticação
+      accessToken = authData.access_token;
+      refreshToken = authData.refresh_token;
+      isOnline = true;
+      baseUrl = authData.baseUrl;
+      proxyUrl = authData.proxyUrl;
 
-      // Загружаем устройства
-      devices = devicesData.filter(device => device.dev_type === 'light')
-      populateDeviceList()
+      // Carrega dispositivos
+      devices = devicesData.filter((device) => device.dev_type === "light");
+      populateDeviceList();
 
-      // Синхронизируем устройства с main процессом для трея
+      // Sincroniza dispositivos com o processo principal para a bandeja
       if (window.electronAPI && window.electronAPI.setDevices) {
-        window.electronAPI.setDevices(devices)
+        window.electronAPI.setDevices(devices);
       }
 
       if (devices.length > 0) {
-        showSuccess('Устройства загружены')
+        showSuccess("Dispositivos carregados");
       }
 
-      // Запускаем автоматическое обновление токена
-      startAutoRefresh()
+      // Inicia atualização automática do token
+      startAutoRefresh();
     } catch (error) {
-      console.error('Ошибка загрузки сохраненных данных:', error)
-      localStorage.removeItem('tuya_auth')
-      localStorage.removeItem('tuya_devices')
+      console.error("Erro ao carregar dados salvos:", error);
+      localStorage.removeItem("tuya_auth");
+      localStorage.removeItem("tuya_devices");
 
-      // Синхронизируем пустой список устройств с треем
+      // Sincroniza lista vazia de dispositivos com a bandeja
       if (window.electronAPI && window.electronAPI.setDevices) {
-        window.electronAPI.setDevices([])
+        window.electronAPI.setDevices([]);
       }
     }
   } else {
-    // Синхронизируем пустой список устройств с треем
+    // Sincroniza lista vazia de dispositivos com a bandeja
     if (window.electronAPI && window.electronAPI.setDevices) {
-      window.electronAPI.setDevices([])
+      window.electronAPI.setDevices([]);
     }
   }
 }
 
 function populateDeviceList() {
-  const select = document.getElementById('deviceSelect')
-  select.innerHTML = '<option value="">Выберите устройство</option>'
+  const select = document.getElementById("deviceSelect");
+  select.innerHTML = '<option value="">Selecione um dispositivo</option>';
 
-  devices.forEach(device => {
-    const option = document.createElement('option')
-    option.value = device.id
-    option.textContent = device.name || device.id
-    select.appendChild(option)
-  })
+  devices.forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.id;
+    option.textContent = device.name || device.id;
+    select.appendChild(option);
+  });
 
-  // Синхронизируем устройства с main процессом для трея
+  // Sincroniza dispositivos com o processo principal para a bandeja
   if (window.electronAPI && window.electronAPI.setDevices) {
-    window.electronAPI.setDevices(devices)
+    window.electronAPI.setDevices(devices);
   }
 }
 
 function selectDevice(deviceId) {
   if (!deviceId) {
-    currentDevice = null
-    hideControlSection()
+    currentDevice = null;
+    hideControlSection();
 
-    // Синхронизируем с main процессом
+    // Sincroniza com o processo principal
     if (window.electronAPI && window.electronAPI.setCurrentDevice) {
-      window.electronAPI.setCurrentDevice(null)
+      window.electronAPI.setCurrentDevice(null);
     }
-    return
+    return;
   }
 
-  currentDevice = devices.find(d => d.id === deviceId)
+  currentDevice = devices.find((d) => d.id === deviceId);
   if (currentDevice) {
-    updateDeviceInfo()
-    showControlSection()
+    updateDeviceInfo();
+    showControlSection();
 
-    // Синхронизируем с main процессом
+    // Sincroniza com o processo principal
     if (window.electronAPI && window.electronAPI.setCurrentDevice) {
-      window.electronAPI.setCurrentDevice(currentDevice)
+      window.electronAPI.setCurrentDevice(currentDevice);
     }
 
-    // Показываем уведомление о выборе устройства
-    showSuccess(`Устройство "${currentDevice.name || currentDevice.id}" выбрано`)
+    // Mostra notificação sobre a seleção do dispositivo
+    showSuccess(
+      `Dispositivo "${currentDevice.name || currentDevice.id}" selecionado`
+    );
   }
 }
 
 function updateDeviceInfo() {
-  if (!currentDevice) return
+  if (!currentDevice) return;
 
-  // Обновляем имя устройства
-  document.getElementById('deviceName').textContent = currentDevice.name || currentDevice.id
+  // Atualiza o nome do dispositivo
+  document.getElementById("deviceName").textContent =
+    currentDevice.name || currentDevice.id;
 
-  // Обновляем индикатор статуса
-  const statusIndicator = document.getElementById('statusIndicator')
-  const isOn = currentDevice.data && currentDevice.data.state
-  statusIndicator.className = 'status-indicator' + (isOn ? ' online' : '')
+  // Atualiza o indicador de status
+  const statusIndicator = document.getElementById("statusIndicator");
+  const isOn = currentDevice.data && currentDevice.data.state;
+  statusIndicator.className = "status-indicator" + (isOn ? " online" : "");
 
-  // Обновляем яркость
-  const brightness = currentDevice.data && currentDevice.data.brightness
+  // Atualiza o brilho
+  const brightness = currentDevice.data && currentDevice.data.brightness;
   if (brightness) {
-    const displayValue = brightness === 0 ? '0% (выключено)' : brightness + '%'
-    document.getElementById('deviceBrightness').textContent = displayValue
+    const displayValue = brightness === 0 ? "0% (desligado)" : brightness + "%";
+    document.getElementById("deviceBrightness").textContent = displayValue;
   } else {
-    document.getElementById('deviceBrightness').textContent = '-'
+    document.getElementById("deviceBrightness").textContent = "-";
   }
 
-  // Обновляем трей при изменении состояния устройства
-  if (window.electronAPI && window.electronAPI.updateDeviceState && currentDevice.data) {
-    window.electronAPI.updateDeviceState(currentDevice.id, currentDevice.data.state ? 1 : 0)
+  // Atualiza a bandeja quando o estado do dispositivo muda
+  if (
+    window.electronAPI &&
+    window.electronAPI.updateDeviceState &&
+    currentDevice.data
+  ) {
+    window.electronAPI.updateDeviceState(
+      currentDevice.id,
+      currentDevice.data.state ? 1 : 0
+    );
   }
 }
 
 function updateColorFromHue(hue) {
-  const color = hslToHex(hue, 100, 50)
-  document.getElementById('colorValue').textContent = color
+  const color = hslToHex(hue, 100, 50);
+  document.getElementById("colorValue").textContent = color;
 
   if (currentDevice) {
-    setDeviceColor(hue, 100, getBrightness())
+    setDeviceColor(hue, 100, getBrightness());
   }
 }
 
 function updateBrightness(brightness) {
-  // Преобразуем 0-90 в 10-100 для отображения
-  const actualBrightness = brightness === 0 ? 0 : Math.round((brightness / 90) * 90 + 10)
-  const displayValue = brightness === 0 ? '0% (выключено)' : actualBrightness + '%'
-  document.getElementById('brightnessValue').textContent = displayValue
+  // Converte 0-90 em 10-100 para exibição
+  const actualBrightness =
+    brightness === 0 ? 0 : Math.round((brightness / 90) * 90 + 10);
+  const displayValue =
+    brightness === 0 ? "0% (desligado)" : actualBrightness + "%";
+  document.getElementById("brightnessValue").textContent = displayValue;
 
   if (currentDevice) {
-    setDeviceBrightness(actualBrightness)
+    setDeviceBrightness(actualBrightness);
   }
 }
 
 function getBrightness() {
-  return parseInt(document.getElementById('brightnessSlider').value)
+  return parseInt(document.getElementById("brightnessSlider").value);
 }
 
 function setDeviceColor(hue, saturation, brightness) {
-  if (!currentDevice) return
+  if (!currentDevice) return;
 
   const colorData = {
     hue: hue,
     saturation: saturation / 100,
-    brightness: brightness
-  }
+    brightness: brightness,
+  };
 
   if (isOnline) {
-    controlDeviceOnline('colorSet', 'color', colorData)
+    controlDeviceOnline("colorSet", "color", colorData);
   } else {
-    controlDeviceOffline('colorSet', colorData)
+    controlDeviceOffline("colorSet", colorData);
   }
 
-  // Показываем уведомление о изменении цвета
-  const color = hslToHex(hue, saturation, brightness)
-  showSuccess(`Цвет "${currentDevice.name || currentDevice.id}" изменен на ${color}`)
+  // Mostra notificação sobre mudança de cor
+  const color = hslToHex(hue, saturation, brightness);
+  showSuccess(
+    `Cor de "${currentDevice.name || currentDevice.id}" alterada para ${color}`
+  );
 }
 
 function setDeviceBrightness(brightness) {
-  if (!currentDevice) return
+  if (!currentDevice) return;
 
   if (brightness === 0) {
-    // Если яркость 0, выключаем устройство
+    // Se o brilho for 0, desliga o dispositivo
     if (isOnline) {
-      controlDeviceOnline('turnOnOff', 'value', 0)
+      controlDeviceOnline("turnOnOff", "value", 0);
     } else {
-      controlDeviceOffline('turnOnOff', 0)
+      controlDeviceOffline("turnOnOff", 0);
     }
   } else {
-    // Если яркость больше 0, включаем устройство и устанавливаем яркость
-    // Преобразуем 10-100 в 0-90 для отправки на устройство
-    const deviceBrightness = Math.round(((brightness - 10) / 90) * 90)
+    // Se o brilho for maior que 0, liga o dispositivo e define o brilho
+    // Converte 10-100 em 0-90 para enviar ao dispositivo
+    const deviceBrightness = Math.round(((brightness - 10) / 90) * 90);
     if (isOnline) {
-      controlDeviceOnline('turnOnOff', 'value', 1)
-      controlDeviceOnline('brightnessSet', 'value', deviceBrightness)
+      controlDeviceOnline("turnOnOff", "value", 1);
+      controlDeviceOnline("brightnessSet", "value", deviceBrightness);
     } else {
-      controlDeviceOffline('turnOnOff', 1)
-      controlDeviceOffline('brightnessSet', deviceBrightness)
+      controlDeviceOffline("turnOnOff", 1);
+      controlDeviceOffline("brightnessSet", deviceBrightness);
     }
   }
 
-  // Показываем уведомление о изменении яркости
+  // Mostra notificação sobre mudança de brilho
   if (brightness === 0) {
-    showSuccess(`Выключаем "${currentDevice.name || currentDevice.id}"`)
+    showSuccess(`Desligando "${currentDevice.name || currentDevice.id}"`);
   } else {
-    showSuccess(`Яркость "${currentDevice.name || currentDevice.id}" установлена на ${brightness}%`)
+    showSuccess(
+      `Brilho de "${
+        currentDevice.name || currentDevice.id
+      }" definido para ${brightness}%`
+    );
   }
 }
 
-// Быстрые действия
+// Ações rápidas
 function quickAction(action) {
   if (!currentDevice) {
-    showError('Выберите устройство')
-    return
+    showError("Selecione um dispositivo");
+    return;
   }
 
   switch (action) {
-    case 'on':
+    case "on":
       if (isOnline) {
-        controlDeviceOnline('turnOnOff', 'value', 1)
+        controlDeviceOnline("turnOnOff", "value", 1);
       } else {
-        controlDeviceOffline('turnOnOff', 1)
+        controlDeviceOffline("turnOnOff", 1);
       }
-      showSuccess(`Включаем "${currentDevice.name || currentDevice.id}"`)
-      break
-    case 'off':
+      showSuccess(`Ligando "${currentDevice.name || currentDevice.id}"`);
+      break;
+    case "off":
       if (isOnline) {
-        controlDeviceOnline('turnOnOff', 'value', 0)
+        controlDeviceOnline("turnOnOff", "value", 0);
       } else {
-        controlDeviceOffline('turnOnOff', 0)
+        controlDeviceOffline("turnOnOff", 0);
       }
-      showSuccess(`Выключаем "${currentDevice.name || currentDevice.id}"`)
-      break
-    case 'bright':
-      document.getElementById('brightnessSlider').value = 100
-      updateBrightness(100)
-      break
-    case 'dim':
-      document.getElementById('brightnessSlider').value = 30
-      updateBrightness(30)
-      break
+      showSuccess(`Desligando "${currentDevice.name || currentDevice.id}"`);
+      break;
+    case "bright":
+      document.getElementById("brightnessSlider").value = 100;
+      updateBrightness(100);
+      break;
+    case "dim":
+      document.getElementById("brightnessSlider").value = 30;
+      updateBrightness(30);
+      break;
   }
 }
 
 async function controlDeviceOnline(action, valueName, value) {
   try {
-    const response = await fetch(proxyUrl + baseUrl + 'skill', {
-      method: 'POST',
+    const response = await fetch(proxyUrl + baseUrl + "skill", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         header: {
           name: action,
-          namespace: 'control',
-          payloadVersion: 1
+          namespace: "control",
+          payloadVersion: 1,
         },
         payload: {
           accessToken: accessToken,
           devId: currentDevice.id,
-          [valueName]: value
-        }
-      })
-    })
+          [valueName]: value,
+        },
+      }),
+    });
 
-    const data = await response.json()
+    const data = await response.json();
 
-    if (data.header && data.header.code === 'SUCCESS') {
-      updateDeviceInfo()
+    if (data.header && data.header.code === "SUCCESS") {
+      updateDeviceInfo();
 
-      // Обновляем состояние устройства в трее
-      if (action === 'turnOnOff' && window.electronAPI && window.electronAPI.updateDeviceState) {
-        window.electronAPI.updateDeviceState(currentDevice.id, value === 1)
+      // Atualiza o estado do dispositivo na bandeja
+      if (
+        action === "turnOnOff" &&
+        window.electronAPI &&
+        window.electronAPI.updateDeviceState
+      ) {
+        window.electronAPI.updateDeviceState(currentDevice.id, value === 1);
       }
     } else {
-      showError('Ошибка выполнения команды')
+      showError("Erro ao executar comando");
     }
   } catch (error) {
-    console.error('Ошибка управления устройством:', error)
-    showError('Ошибка сети')
+    console.error("Erro ao controlar dispositivo:", error);
+    showError("Erro de rede");
   }
 }
 
 function controlDeviceOffline(action, value) {
-  // В офлайн режиме обновляем локальные данные
+  // No modo offline, atualiza dados locais
   if (currentDevice) {
-    if (!currentDevice.data) currentDevice.data = {}
+    if (!currentDevice.data) currentDevice.data = {};
 
     switch (action) {
-      case 'turnOnOff':
-        currentDevice.data.state = value === 1
-        break
-      case 'brightnessSet':
-        currentDevice.data.brightness = value
-        break
-      case 'colorSet':
-        currentDevice.data.color = value
-        break
+      case "turnOnOff":
+        currentDevice.data.state = value === 1;
+        break;
+      case "brightnessSet":
+        currentDevice.data.brightness = value;
+        break;
+      case "colorSet":
+        currentDevice.data.color = value;
+        break;
     }
 
-    updateDeviceInfo()
+    updateDeviceInfo();
 
-    // Обновляем состояние устройства в трее
-    if (action === 'turnOnOff' && window.electronAPI && window.electronAPI.updateDeviceState) {
-      window.electronAPI.updateDeviceState(currentDevice.id, value === 1)
+    // Atualiza o estado do dispositivo na bandeja
+    if (
+      action === "turnOnOff" &&
+      window.electronAPI &&
+      window.electronAPI.updateDeviceState
+    ) {
+      window.electronAPI.updateDeviceState(currentDevice.id, value === 1);
     }
   }
 }
 
-// Функции авторизации
+// Funções de autenticação
 function toggleAuth() {
-  const authSection = document.getElementById('authSection')
-  const isVisible = authSection.style.display !== 'none'
+  const authSection = document.getElementById("authSection");
+  const isVisible = authSection.style.display !== "none";
 
   if (isVisible) {
-    hideAuthSection()
+    hideAuthSection();
   } else {
-    showAuthSection()
+    showAuthSection();
   }
 }
 
 function showAuthSection() {
-  document.getElementById('authSection').style.display = 'block'
-  hideDeviceSection()
-  hideControlSection()
+  document.getElementById("authSection").style.display = "block";
+  hideDeviceSection();
+  hideControlSection();
 }
 
 function hideAuthSection() {
-  document.getElementById('authSection').style.display = 'none'
-  showDeviceSection()
+  document.getElementById("authSection").style.display = "none";
+  showDeviceSection();
 }
 
 function showDeviceSection() {
-  document.querySelector('.device-section').style.display = 'block'
+  document.querySelector(".device-section").style.display = "block";
 }
 
 function hideDeviceSection() {
-  document.querySelector('.device-section').style.display = 'none'
+  document.querySelector(".device-section").style.display = "none";
 }
 
 function showControlSection() {
-  document.getElementById('controlSection').style.display = 'block'
+  document.getElementById("controlSection").style.display = "block";
 }
 
 function hideControlSection() {
-  document.getElementById('controlSection').style.display = 'none'
+  document.getElementById("controlSection").style.display = "none";
 }
 
 async function doLogin() {
-  const username = document.getElementById('username').value
-  const password = document.getElementById('password').value
-  const region = document.getElementById('region').value
-  const platform = document.getElementById('platform').value
-  const saveAuth = document.getElementById('saveAuth').checked
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const region = document.getElementById("region").value;
+  const platform = document.getElementById("platform").value;
+  const saveAuth = document.getElementById("saveAuth").checked;
 
   if (!username || !password) {
-    showLoginError('Введите логин и пароль')
-    return
+    showLoginError("Digite o login e a senha");
+    return;
   }
 
-  showLoading(true)
+  showLoading(true);
 
   try {
-    const loginResult = await login(username, password, region, platform)
+    const loginResult = await login(username, password, region, platform);
 
     if (loginResult.success) {
-      accessToken = loginResult.access_token
-      refreshToken = loginResult.refresh_token
-      isOnline = true
+      accessToken = loginResult.access_token;
+      refreshToken = loginResult.refresh_token;
+      isOnline = true;
 
-      // Обновляем URL в зависимости от региона
-      updateBaseUrl(region)
+      // Atualiza URL dependendo da região
+      updateBaseUrl(region);
 
-      // Загружаем устройства онлайн
-      const deviceResult = await getDeviceList()
+      // Carrega dispositivos online
+      const deviceResult = await getDeviceList();
       if (deviceResult.success) {
-        devices = deviceResult.devices.filter(device => device.dev_type === 'light')
-        populateDeviceList()
+        devices = deviceResult.devices.filter(
+          (device) => device.dev_type === "light"
+        );
+        populateDeviceList();
 
-        // Синхронизируем устройства с main процессом для трея
+        // Sincroniza dispositivos com o processo principal para a bandeja
         if (window.electronAPI && window.electronAPI.setDevices) {
-          window.electronAPI.setDevices(devices)
+          window.electronAPI.setDevices(devices);
         }
 
-        // Сбрасываем текущее устройство при новом входе
-        currentDevice = null
+        // Reseta o dispositivo atual ao fazer novo login
+        currentDevice = null;
         if (window.electronAPI && window.electronAPI.setCurrentDevice) {
-          window.electronAPI.setCurrentDevice(null)
+          window.electronAPI.setCurrentDevice(null);
         }
-        hideControlSection()
+        hideControlSection();
 
-        // Сохраняем данные авторизации и устройства только если отмечен чекбокс
+        // Salva dados de autenticação e dispositivos apenas se a caixa estiver marcada
         if (saveAuth) {
-          saveAuthData(username, password, region, platform)
-          saveDevicesData(devices)
+          saveAuthData(username, password, region, platform);
+          saveDevicesData(devices);
         }
 
-        // Запускаем автоматическое обновление токена
-        startAutoRefresh()
+        // Inicia atualização automática do token
+        startAutoRefresh();
 
-        showSuccess('Авторизация успешна')
-        hideAuthSection()
+        showSuccess("Autenticação bem-sucedida");
+        hideAuthSection();
       } else {
-        showLoginError('Не удалось загрузить устройства')
+        showLoginError("Não foi possível carregar os dispositivos");
       }
     } else {
-      showLoginError('Ошибка авторизации')
+      showLoginError("Erro de autenticação");
     }
   } catch (error) {
-    console.error('Ошибка авторизации:', error)
-    showLoginError('Ошибка сети')
+    console.error("Erro de autenticação:", error);
+    showLoginError("Erro de rede");
   }
 
-  showLoading(false)
+  showLoading(false);
 }
 
 async function login(username, password, region, platform) {
-  let url = baseUrl + 'auth.do'
+  let url = baseUrl + "auth.do";
 
-  if (region === '1') {
-    url = baseUrl.replace('eu', 'us') + 'auth.do'
-  } else if (region === '86') {
-    url = baseUrl.replace('eu', 'cn') + 'auth.do'
+  if (region === "1") {
+    url = baseUrl.replace("eu", "us") + "auth.do";
+  } else if (region === "86") {
+    url = baseUrl.replace("eu", "cn") + "auth.do";
   }
 
   const headers = {
-    'Content-Type': 'application/x-www-form-urlencoded'
-  }
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
 
   const data = {
     userName: username,
     password: password,
     countryCode: region,
     bizType: platform,
-    from: 'tuya'
-  }
+    from: "tuya",
+  };
 
   const response = await fetch(proxyUrl + url, {
-    method: 'POST',
+    method: "POST",
     headers: headers,
-    body: new URLSearchParams(data)
-  })
+    body: new URLSearchParams(data),
+  });
 
-  const result = await response.json()
+  const result = await response.json();
 
   if (result.access_token) {
     return {
       success: true,
       access_token: result.access_token,
       refresh_token: result.refresh_token,
-      expires_in: result.expires_in
-    }
+      expires_in: result.expires_in,
+    };
   } else {
-    return { success: false }
+    return { success: false };
   }
 }
 
 async function getDeviceList() {
-  const url = baseUrl + 'skill'
+  const url = baseUrl + "skill";
   const headers = {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  };
 
   const data = {
     header: {
-      name: 'Discovery',
-      namespace: 'discovery',
-      payloadVersion: 1
+      name: "Discovery",
+      namespace: "discovery",
+      payloadVersion: 1,
     },
     payload: {
-      accessToken: accessToken
-    }
-  }
+      accessToken: accessToken,
+    },
+  };
 
   const response = await fetch(proxyUrl + url, {
-    method: 'POST',
+    method: "POST",
     headers: headers,
-    body: JSON.stringify(data)
-  })
+    body: JSON.stringify(data),
+  });
 
-  const result = await response.json()
+  const result = await response.json();
 
   if (result.payload && result.payload.devices) {
     return {
       success: true,
-      devices: result.payload.devices
-    }
+      devices: result.payload.devices,
+    };
   } else {
-    return { success: false }
+    return { success: false };
   }
 }
 
 function updateBaseUrl(region) {
-  if (region === '1') {
-    baseUrl = baseUrl.replace('eu', 'us')
-  } else if (region === '86') {
-    baseUrl = baseUrl.replace('eu', 'cn')
-    proxyUrl = 'https://cors-anywhere.herokuapp.com/'
+  if (region === "1") {
+    baseUrl = baseUrl.replace("eu", "us");
+  } else if (region === "86") {
+    baseUrl = baseUrl.replace("eu", "cn");
+    proxyUrl = "https://cors-anywhere.herokuapp.com/";
   }
 }
 
-// Функции для работы с refresh token
+// Funções para trabalhar com refresh token
 async function refreshAccessToken() {
   if (!refreshToken) {
-    console.error('Нет refresh token')
-    return false
+    console.error("Não há refresh token");
+    return false;
   }
 
   try {
-    const url = baseUrl + 'access.do'
+    const url = baseUrl + "access.do";
     const params = new URLSearchParams({
-      grant_type: 'refresh_token',
+      grant_type: "refresh_token",
       refresh_token: refreshToken,
-      rand: Math.random()
-    })
+      rand: Math.random(),
+    });
 
-    const response = await fetch(proxyUrl + url + '?' + params.toString(), {
-      method: 'GET',
+    const response = await fetch(proxyUrl + url + "?" + params.toString(), {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+        "Content-Type": "application/json",
+      },
+    });
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.access_token) {
-      accessToken = result.access_token
-      refreshToken = result.refresh_token
+      accessToken = result.access_token;
+      refreshToken = result.refresh_token;
 
-      // Обновляем сохраненные данные
-      const savedAuth = localStorage.getItem('tuya_auth')
+      // Atualiza dados salvos
+      const savedAuth = localStorage.getItem("tuya_auth");
       if (savedAuth) {
-        const authData = JSON.parse(savedAuth)
-        authData.access_token = accessToken
-        authData.refresh_token = refreshToken
-        localStorage.setItem('tuya_auth', JSON.stringify(authData))
+        const authData = JSON.parse(savedAuth);
+        authData.access_token = accessToken;
+        authData.refresh_token = refreshToken;
+        localStorage.setItem("tuya_auth", JSON.stringify(authData));
       }
 
-      console.log('Токен обновлен успешно')
-      return true
+      console.log("Token atualizado com sucesso");
+      return true;
     } else {
-      console.error('Ошибка обновления токена:', result)
-      return false
+      console.error("Erro ao atualizar token:", result);
+      return false;
     }
   } catch (error) {
-    console.error('Ошибка обновления токена:', error)
-    return false
+    console.error("Erro ao atualizar token:", error);
+    return false;
   }
 }
 
 function startAutoRefresh() {
-  // Останавливаем предыдущий интервал если есть
+  // Para o intervalo anterior se existir
   if (refreshInterval) {
-    clearInterval(refreshInterval)
+    clearInterval(refreshInterval);
   }
 
-  // Запускаем обновление каждые 2 минуты (120000 мс)
+  // Inicia atualização a cada 2 minutos (120000 ms)
   refreshInterval = setInterval(async () => {
     if (isOnline && refreshToken) {
-      console.log('Автоматическое обновление токена...')
-      await refreshAccessToken()
+      console.log("Atualização automática do token...");
+      await refreshAccessToken();
     }
-  }, 120000)
+  }, 120000);
 }
 
 function stopAutoRefresh() {
   if (refreshInterval) {
-    clearInterval(refreshInterval)
-    refreshInterval = null
+    clearInterval(refreshInterval);
+    refreshInterval = null;
   }
 }
 
@@ -650,229 +682,262 @@ function saveAuthData(username, password, region, platform) {
     access_token: accessToken,
     refresh_token: refreshToken,
     baseUrl: baseUrl,
-    proxyUrl: proxyUrl
-  }
-  localStorage.setItem('tuya_auth', JSON.stringify(authData))
+    proxyUrl: proxyUrl,
+  };
+  localStorage.setItem("tuya_auth", JSON.stringify(authData));
 }
 
 function saveDevicesData(devices) {
-  localStorage.setItem('tuya_devices', JSON.stringify(devices))
+  localStorage.setItem("tuya_devices", JSON.stringify(devices));
 
-  // Синхронизируем устройства с main процессом для трея
+  // Sincroniza dispositivos com o processo principal para a bandeja
   if (window.electronAPI && window.electronAPI.setDevices) {
-    window.electronAPI.setDevices(devices)
+    window.electronAPI.setDevices(devices);
   }
 }
 
-// Функции импорта/экспорта
+// Funções de importação/exportação
 function importAuth() {
-  const username = document.getElementById('username').value
-  const password = document.getElementById('password').value
-  const region = document.getElementById('region').value
-  const platform = document.getElementById('platform').value
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const region = document.getElementById("region").value;
+  const platform = document.getElementById("platform").value;
 
   if (!username || !password) {
-    showLoginError('Введите логин и пароль для импорта авторизации')
-    return
+    showLoginError("Digite o login e a senha para importar autenticação");
+    return;
   }
 
-  // Сохраняем данные авторизации без попытки входа
-  saveAuthData(username, password, region, platform)
+  // Salva dados de autenticação sem tentar fazer login
+  saveAuthData(username, password, region, platform);
 
-  // Синхронизируем устройства с main процессом для трея (пустой массив)
+  // Sincroniza dispositivos com o processo principal para a bandeja (array vazio)
   if (window.electronAPI && window.electronAPI.setDevices) {
-    window.electronAPI.setDevices([])
+    window.electronAPI.setDevices([]);
   }
 
-  // Сбрасываем текущее устройство
-  currentDevice = null
+  // Reseta o dispositivo atual
+  currentDevice = null;
   if (window.electronAPI && window.electronAPI.setCurrentDevice) {
-    window.electronAPI.setCurrentDevice(null)
+    window.electronAPI.setCurrentDevice(null);
   }
-  hideControlSection()
+  hideControlSection();
 
-  showSuccess('Данные авторизации сохранены')
+  showSuccess("Dados de autenticação salvos");
 }
 
 function refreshDevices() {
-  const savedAuth = localStorage.getItem('tuya_auth')
+  const savedAuth = localStorage.getItem("tuya_auth");
   if (savedAuth) {
     try {
-      const authData = JSON.parse(savedAuth)
+      const authData = JSON.parse(savedAuth);
 
-      // Восстанавливаем данные авторизации
-      accessToken = authData.access_token
-      refreshToken = authData.refresh_token
-      isOnline = true
-      baseUrl = authData.baseUrl
-      proxyUrl = authData.proxyUrl
+      // Restaura dados de autenticação
+      accessToken = authData.access_token;
+      refreshToken = authData.refresh_token;
+      isOnline = true;
+      baseUrl = authData.baseUrl;
+      proxyUrl = authData.proxyUrl;
 
-      // Обновляем токен через refresh token
-      refreshAccessToken().then(success => {
+      // Atualiza token através do refresh token
+      refreshAccessToken().then((success) => {
         if (success) {
-          // Обновляем устройства
-          getDeviceList().then(result => {
+          // Atualiza dispositivos
+          getDeviceList().then((result) => {
             if (result.success) {
-              devices = result.devices.filter(device => device.dev_type === 'light')
-              populateDeviceList()
-              saveDevicesData(devices)
+              devices = result.devices.filter(
+                (device) => device.dev_type === "light"
+              );
+              populateDeviceList();
+              saveDevicesData(devices);
 
-              // Синхронизируем устройства с main процессом для трея
+              // Sincroniza dispositivos com o processo principal para a bandeja
               if (window.electronAPI && window.electronAPI.setDevices) {
-                window.electronAPI.setDevices(devices)
+                window.electronAPI.setDevices(devices);
               }
 
-              // Восстанавливаем текущее устройство, если оно было
-              if (currentDevice && !devices.find(d => d.id === currentDevice.id)) {
-                currentDevice = null
+              // Restaura o dispositivo atual, se existir
+              if (
+                currentDevice &&
+                !devices.find((d) => d.id === currentDevice.id)
+              ) {
+                currentDevice = null;
                 if (window.electronAPI && window.electronAPI.setCurrentDevice) {
-                  window.electronAPI.setCurrentDevice(null)
+                  window.electronAPI.setCurrentDevice(null);
                 }
-                hideControlSection()
+                hideControlSection();
               }
 
-              showSuccess('Устройства обновлены')
+              showSuccess("Dispositivos atualizados");
             } else {
-              showError('Не удалось обновить устройства')
+              showError("Não foi possível atualizar os dispositivos");
             }
-          })
+          });
         } else {
-          showError('Не удалось обновить токен авторизации')
+          showError("Não foi possível atualizar o token de autenticação");
         }
-      })
+      });
     } catch (error) {
-      console.error('Ошибка обновления устройств:', error)
-      showError('Ошибка обновления устройств')
+      console.error("Erro ao atualizar dispositivos:", error);
+      showError("Erro ao atualizar dispositivos");
     }
   } else {
-    showError('Нет сохраненных данных авторизации')
+    showError("Não há dados de autenticação salvos");
   }
 }
 
 function showLoginError(message) {
-  const errorDiv = document.getElementById('loginFailed')
-  errorDiv.textContent = message
-  errorDiv.style.display = 'block'
+  const errorDiv = document.getElementById("loginFailed");
+  errorDiv.textContent = message;
+  errorDiv.style.display = "block";
 }
 
 function showLoading(show) {
-  document.getElementById('loading').style.display = show ? 'block' : 'none'
+  document.getElementById("loading").style.display = show ? "block" : "none";
 }
 
 function showError(message) {
-  const errorDiv = document.getElementById('errorMessage')
-  errorDiv.textContent = message
-  errorDiv.style.display = 'block'
+  const errorDiv = document.getElementById("errorMessage");
+  errorDiv.textContent = message;
+  errorDiv.style.display = "block";
 
   setTimeout(() => {
-    errorDiv.style.display = 'none'
-  }, 5000)
+    errorDiv.style.display = "none";
+  }, 5000);
 }
 
 function showSuccess(message) {
-  const successDiv = document.getElementById('successMessage')
-  successDiv.textContent = message
-  successDiv.style.display = 'block'
+  const successDiv = document.getElementById("successMessage");
+  successDiv.textContent = message;
+  successDiv.style.display = "block";
 
   setTimeout(() => {
-    successDiv.style.display = 'none'
-  }, 3000)
+    successDiv.style.display = "none";
+  }, 3000);
 }
 
-// Утилиты для работы с цветом
+// Utilitários para trabalhar com cores
 function hslToHex(h, s, l) {
-  h /= 360
-  s /= 100
-  l /= 100
+  h /= 360;
+  s /= 100;
+  l /= 100;
 
-  const c = (1 - Math.abs(2 * l - 1)) * s
-  const x = c * (1 - Math.abs((h * 6) % 2 - 1))
-  const m = l - c / 2
-  let r = 0, g = 0, b = 0
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0,
+    g = 0,
+    b = 0;
 
   if (0 <= h && h < 1 / 6) {
-    r = c; g = x; b = 0
+    r = c;
+    g = x;
+    b = 0;
   } else if (1 / 6 <= h && h < 2 / 6) {
-    r = x; g = c; b = 0
+    r = x;
+    g = c;
+    b = 0;
   } else if (2 / 6 <= h && h < 3 / 6) {
-    r = 0; g = c; b = x
+    r = 0;
+    g = c;
+    b = x;
   } else if (3 / 6 <= h && h < 4 / 6) {
-    r = 0; g = x; b = c
+    r = 0;
+    g = x;
+    b = c;
   } else if (4 / 6 <= h && h < 5 / 6) {
-    r = x; g = 0; b = c
+    r = x;
+    g = 0;
+    b = c;
   } else if (5 / 6 <= h && h <= 1) {
-    r = c; g = 0; b = x
+    r = c;
+    g = 0;
+    b = x;
   }
 
-  const rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0')
-  const gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0')
-  const bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0')
+  const rHex = Math.round((r + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  const gHex = Math.round((g + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  const bHex = Math.round((b + m) * 255)
+    .toString(16)
+    .padStart(2, "0");
 
-  return `#${rHex}${gHex}${bHex}`
+  return `#${rHex}${gHex}${bHex}`;
 }
 
 function hexToHsl(hex) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
 
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  let h, s, l = (max + min) / 2
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h,
+    s,
+    l = (max + min) / 2;
 
   if (max === min) {
-    h = s = 0
+    h = s = 0;
   } else {
-    const d = max - min
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break
-      case g: h = (b - r) / d + 2; break
-      case b: h = (r - g) / d + 4; break
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
     }
-    h /= 6
+    h /= 6;
   }
 
   return {
     h: Math.round(h * 360),
     s: Math.round(s * 100),
-    l: Math.round(l * 100)
-  }
+    l: Math.round(l * 100),
+  };
 }
 
-// Функции для кнопок включения/выключения
+// Funções para botões de ligar/desligar
 function turnDeviceOn() {
   if (!currentDevice) {
-    showError('Выберите устройство')
-    return
+    showError("Selecione um dispositivo");
+    return;
   }
 
   if (isOnline) {
-    controlDeviceOnline('turnOnOff', 'value', 1)
+    controlDeviceOnline("turnOnOff", "value", 1);
   } else {
-    controlDeviceOffline('turnOnOff', 1)
+    controlDeviceOffline("turnOnOff", 1);
   }
 
-  showSuccess(`Включаем "${currentDevice.name || currentDevice.id}"`)
+  showSuccess(`Ligando "${currentDevice.name || currentDevice.id}"`);
 }
 
 function turnDeviceOff() {
   if (!currentDevice) {
-    showError('Выберите устройство')
-    return
+    showError("Selecione um dispositivo");
+    return;
   }
 
   if (isOnline) {
-    controlDeviceOnline('turnOnOff', 'value', 0)
+    controlDeviceOnline("turnOnOff", "value", 0);
   } else {
-    controlDeviceOffline('turnOnOff', 0)
+    controlDeviceOffline("turnOnOff", 0);
   }
 
-  showSuccess(`Выключаем "${currentDevice.name || currentDevice.id}"`)
+  showSuccess(`Desligando "${currentDevice.name || currentDevice.id}"`);
 }
 
-// Делаем функции глобально доступными
-window.setBrightness = updateBrightness
-window.turnDeviceOn = turnDeviceOn
-window.turnDeviceOff = turnDeviceOff 
+// Torna as funções globalmente acessíveis
+window.setBrightness = updateBrightness;
+window.turnDeviceOn = turnDeviceOn;
+window.turnDeviceOff = turnDeviceOff;

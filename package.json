@@ -10,7 +10,7 @@
   "author": "Tuya Widget Developer",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0",
+    "electron": "^39.2.3",
     "electron-builder": "^24.6.4"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
       "node_modules/**/*"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
