@@ -1,176 +1,204 @@
 # Tuya Widget Desktop
 
-Полноценный виджет для управления умными лампами Tuya на рабочем столе Windows, созданный с использованием Electron.
+**Versão traduzida para português**
+Baseado no projeto original criado por **ilfae**.
 
-![Image](image1.png)
+Um widget completo para controlar lâmpadas inteligentes Tuya diretamente na área de trabalho do Windows, criado originalmente pelo desenvolvedor **ilfae**, utilizando Electron.
 
-## Особенности
+## Recursos
 
-- 🏠 **Виджет для рабочего стола** - работает как полноценный виджет Windows
-- 💡 **Управление лампами Tuya** - включение/выключение, регулировка яркости и цвета
-- 🔐 **Безопасная авторизация** - поддержка Smart Life и Tuya аккаунтов
-- 🎨 **Современный интерфейс** - красивый дизайн с темной темой
-- ⌨️ **Горячие клавиши** - Alt+T для показа/скрытия виджета
-- 💾 **Сохранение настроек** - автоматическое сохранение данных авторизации
-- 🔄 **Автообновление** - автоматическое обновление токенов доступа
+* 🏠 **Widget para área de trabalho** – funciona como um widget real no Windows
+* 💡 **Controle de lâmpadas Tuya** – ligar/desligar, ajuste de brilho e cores
+* 🔐 **Autenticação segura** – suporte a contas Smart Life e Tuya
+* 🎨 **Interface moderna** – design bonito com tema escuro
+* ⌨️ **Atalho de teclado** – Alt+T para mostrar/ocultar o widget
+* 💾 **Salvamento automático** – guarda credenciais e configurações
+* 🔄 **Atualização automática** – renova tokens de acesso automaticamente
 
-## Установка
+---
 
-### Требования
-- Node.js 16+ 
-- npm или yarn
-- Windows 10/11
+## Instalação
 
-### Шаги установки
+### Requisitos
 
-1. **Клонируйте репозиторий:**
-   ```bash
+* Node.js 16+
+* npm ou yarn
+* Windows 10/11
+
+### Passos de instalação
+
+1. **Clone o repositório:**
+
+   ```
    git clone https://github.com/ilfae/Tuya-Widget
    cd tuya-widget
    ```
 
-2. **Установите зависимости:**
-   ```bash
+2. **Instale as dependências:**
+
+   ```
    npm install
    ```
 
-3. **Запустите в режиме разработки:**
-   ```bash
+3. **Execute em modo de desenvolvimento:**
+
+   ```
    npm run dev
    ```
 
-4. **Соберите приложение:**
-   ```bash
+4. **Gere a build:**
+
+   ```
    npm run build
    ```
 
-## Использование
+---
 
-### Первый запуск
+## Uso
 
-1. Запустите приложение
-2. Нажмите кнопку "Авторизация" (🔑)
-3. Введите данные вашего Tuya/Smart Life аккаунта:
-   - **Логин** - email или номер телефона
-   - **Пароль** - пароль от аккаунта
-   - **Регион** - выберите ваш регион (EU/US/CN)
-   - **Платформа** - выберите Tuya или Smart Life
-4. Нажмите "Войти"
-5. Выберите устройство из списка
+### Primeira execução
 
-### Управление лампами
+1. Abra o aplicativo
+2. Clique em **"Autorização" (🔑)**
+3. Insira suas credenciais Tuya/Smart Life:
 
-- **Включить/Выключить** - кнопки с иконкой питания
-- **Яркость** - слайдер с иконкой солнца
-- **Цвет** - цветовой слайдер для RGB ламп
-- **Быстрые действия** - кнопки для быстрого управления
+   * **Login** – e-mail ou telefone
+   * **Senha**
+   * **Região** – EU/US/CN
+   * **Plataforma** – Tuya ou Smart Life
+4. Clique em **Entrar**
+5. Selecione o dispositivo desejado na lista
 
-### Управление окном
+### Controles das lâmpadas
 
-- **Перетаскивание** - перетащите заголовок для перемещения
-- **Свернуть** - кнопка с иконкой минуса
-- **Переключить режим** - кнопка с иконкой развернуть/свернуть
-- **Закрыть** - кнопка с иконкой X (скрывает виджет)
-- **Горячие клавиши** - Alt+T для показа/скрытия
+* **Ligar/Desligar** – botão com ícone de energia
+* **Brilho** – controle deslizante
+* **Cor** – seletor de cor para lâmpadas RGB
+* **Ações rápidas** – botões de atalho
 
-## Структура проекта
+### Controle da janela
+
+* **Movimentação** – arraste o cabeçalho
+* **Minimizar** – ícone de “–”
+* **Modo de janela** – alternar entre widget/normal
+* **Fechar** – ícone “X” (minimiza o widget)
+* **Atalho** – Alt+T
+
+---
+
+## Estrutura do projeto
 
 ```
 tuya-widget/
-├── main.js              # Основной процесс Electron
-├── preload.js           # Preload скрипт для безопасности
-├── package.json         # Конфигурация проекта
-├── renderer/            # Файлы интерфейса
-│   ├── index.html       # HTML разметка
-│   ├── styles.css       # Стили
-│   └── widget.js        # Логика виджета
-├── icons/               # Иконки приложения
-└── dist/                # Собранное приложение
+├── main.js              # Processo principal do Electron
+├── preload.js           # Script preload para segurança
+├── package.json         # Configurações do projeto
+├── renderer/            # Interface
+│   ├── index.html
+│   ├── styles.css
+│   └── widget.js
+├── icons/               # Ícones do aplicativo
+└── dist/                # Build final
 ```
 
-## Настройка
+---
 
-### Режимы окна
+## Configurações
 
-- **Виджет режим** (по умолчанию):
-  - Размер: 320x480
-  - Поверх всех окон
-  - Скрыт из панели задач
-  - Перетаскиваемый
+### Modos de janela
 
-- **Обычный режим**:
-  - Размер: 400x600
-  - Обычное окно
-  - Видим в панели задач
+* **Modo widget** (padrão):
 
-### Сохранение данных
+  * 320x480
+  * Sempre no topo
+  * Oculto da barra de tarefas
+  * Arrastável
 
-Приложение автоматически сохраняет:
-- Данные авторизации
-- Список устройств
-- Позицию окна
-- Настройки пользователя
+* **Modo janela normal**:
 
-## Разработка
+  * 400x600
+  * Comportamento padrão de janela
+  * Visível na barra de tarefas
 
-### Команды
+### Armazenamento de dados
 
-```bash
-npm start          # Запуск приложения
-npm run dev        # Запуск в режиме разработки
-npm run build      # Сборка приложения
-npm run dist       # Создание установщика
+O app salva automaticamente:
+
+* Credenciais
+* Lista de dispositivos
+* Posição da janela
+* Configurações do usuário
+
+---
+
+## Desenvolvimento
+
+### Comandos
+
+```
+npm start          # Executar o app
+npm run dev        # Modo desenvolvimento
+npm run build      # Gerar build
+npm run dist       # Criar instalador
 ```
 
-### Отладка
+### Depuração
 
-Для отладки используйте:
-- F12 - открыть DevTools
-- Ctrl+Shift+I - открыть DevTools
-- Ctrl+R - перезагрузить приложение
+* **F12** – abrir DevTools
+* **Ctrl+Shift+I** – DevTools
+* **Ctrl+R** – recarregar
 
-## Безопасность
+---
 
-- Используется `contextIsolation` для безопасности
-- Все API вызовы проходят через preload скрипт
-- Данные сохраняются в защищенном хранилище Electron
-- Нет прямого доступа к Node.js API из renderer процесса
+## Segurança
 
-## Поддерживаемые устройства
+* `contextIsolation` ativado
+* APIs expostas apenas via preload
+* Dados em armazenamento protegido
+* Nenhum acesso direto ao Node.js pela interface
 
-- RGB лампы Tuya/Smart Life
-- Белые лампы с регулировкой яркости
-- Умные розетки (базовое управление)
+---
 
-## Устранение неполадок
+## Dispositivos suportados
 
-### Проблемы с авторизацией
-1. Проверьте правильность логина и пароля
-2. Убедитесь, что выбран правильный регион
-3. Попробуйте использовать VPN если есть проблемы с доступом
+* Lâmpadas RGB Tuya/Smart Life
+* Lâmpadas brancas com ajuste de brilho
+* Tomadas inteligentes (funções básicas)
 
-### Проблемы с подключением
-1. Проверьте интернет соединение
-2. Убедитесь, что устройства подключены к сети
-3. Попробуйте обновить список устройств
+---
 
-### Проблемы с приложением
-1. Перезапустите приложение
-2. Очистите сохраненные данные
-3. Переустановите приложение
+## Solução de problemas
 
-## Лицензия
+### Falha na autenticação
+
+1. Verifique login e senha
+2. Confirme a região
+3. Tente usar VPN
+
+### Falha de conexão
+
+1. Verifique sua internet
+2. Certifique-se de que o dispositivo está online
+3. Atualize a lista de dispositivos
+
+### Problemas gerais
+
+1. Reinicie o aplicativo
+2. Limpe os dados salvos
+3. Reinstale
+
+---
+
+## Licença
 
 MIT License
 
-## Поддержка
+---
 
+## Suporte
 
-Если у вас возникли проблемы или есть предложения по улучшению, создайте issue в репозитории проекта. 
+Em caso de problemas ou sugestões, abra uma *issue* no repositório original.
 
-
-
-
-
+---
 
 
